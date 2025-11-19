@@ -10,6 +10,7 @@ contract RPSClub is ERC1155, IResultCallback {
     using Clones for address;
     mapping(address => uint256) wins;
     mapping(address instances => bool registred) instances;
+    event GameCreated(address indexed instance, address indexed player1, address indexed player2);
 
     constructor(string memory _uri, address _rps) ERC1155(_uri) {
         rpsContract = RPS(_rps);
@@ -20,6 +21,7 @@ contract RPSClub is ERC1155, IResultCallback {
         address instance = address(rpsContract).clone();
         instances[instance] = true;
         RPS(instance).initialize(p1, p2, address(this));
+        emit GameCreated(instance, p1, p2);
     }
 
     function RPSContractCallback(address winner, uint8 endState) external {

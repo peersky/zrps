@@ -1,36 +1,14 @@
-import hre from "hardhat";
 import { ethers } from "hardhat";
-import { Signer, Contract, TransactionReceipt, Log } from "ethers";
+import { Signer } from "ethers";
 import { expect } from "chai";
-import { RPS, RPSClub } from "../typechain-types";
-import { fhevm } from "fhevmjs";
-import { network } from "hardhat";
-import hardhatNetworkHelpers from "@nomicfoundation/hardhat-network-helpers";
-// This test file requires a setup similar to RPS.ts, including FHEVM utilities.
-// We'll mock the fhevm-related parts as we don't have access to the utils file.
-// Let's assume we have a way to generate encrypted inputs and proofs.
-// For simplicity, we will focus on contract interactions and state changes.
-
-enum moveEnum {
-  EMPTY,
-  ROCK,
-  PAPER,
-  SCISSORS,
-  ILLICIT_INPUT_1, // 3 in u8, p1 wins
-  ILLICIT_INPUT_2, // 255 in u8, p1 loses
-}
+import { RPSClub } from "../types";
+import { impersonateAccount, setBalance, stopImpersonatingAccount } from "@nomicfoundation/hardhat-network-helpers";
 
 type Signers = {
   deployer: Signer;
   alice: Signer;
   bob: Signer;
   malfurion: Signer;
-};
-
-// A simple mock for FHE operations. In a real scenario, this would use the FHEVM library.
-const mockFhe = {
-  encrypt_uint8: (move: moveEnum) => ({ data: `encrypted_${move}` }),
-  generate_proof: () => "mock_proof",
 };
 
 async function deployFixture() {
@@ -49,7 +27,6 @@ async function deployFixture() {
 
 describe("RPSClub.sol", function () {
   let signers: Signers;
-  let rpsMaster: RPS;
   let rpsClub: RPSClub;
   let rpsClubAddress: string;
 
@@ -62,15 +39,14 @@ describe("RPSClub.sol", function () {
       malfurion: accounts[3],
     };
 
-    const { rpsContract, rpsClubContract, rpsClubContractAddress } = await deployFixture();
-    rpsMaster = rpsContract;
+    const { rpsClubContract, rpsClubContractAddress } = await deployFixture();
+
     rpsClub = rpsClubContract;
     rpsClubAddress = rpsClubContractAddress;
   });
 
   describe("Deployment", function () {
     it("should set the correct RPS master contract address", async function () {
-      const masterAddress = await rpsMaster.getAddress();
       // The rpsContract is private in RPSClub, so we can't directly check it.
       // We can infer it's correct if game creation works.
       expect(await rpsClub.uri(0)).to.equal("https://my.app/api/nft/{id}");
@@ -92,9 +68,9 @@ describe("RPSClub.sol", function () {
       const game = await ethers.getContractAt("RPS", expectedGameAddress);
       const state = await game.readState();
 
-      expect(await state.player1).to.equal(aliceAddr);
-      expect(await state.player2).to.equal(bobAddr);
-      expect(await state.callback).to.equal(rpsClubAddress);
+      expect(state.player1).to.equal(aliceAddr);
+      expect(state.player2).to.equal(bobAddr);
+      expect(state.callback).to.equal(rpsClubAddress);
     });
 
     it("should revert if player 1 is the zero address", async function () {
@@ -108,18 +84,11 @@ describe("RPSClub.sol", function () {
       const aliceAddr = await signers.alice.getAddress();
       const bobAddr = await signers.bob.getAddress();
 
-      // This test highlights a bug in `RPSClub.sol`.
-      // The `createGame` function clones a new RPS contract but never registers
-      // its address in the `instances` mapping.
-      // Therefore, when the game contract calls `RPSContractCallback`, the
-      // `require(instances[msg.sender], "invalid sender")` check will always fail.
-      // To fix this, `createGame` should add `instances[instance] = true;` after cloning.
-
       const tx = await rpsClub.createGame(aliceAddr, bobAddr);
       await tx.wait();
 
       const gameAddress = ethers.getCreateAddress({ from: rpsClubAddress, nonce: 1 });
-      const gameAsClub = rpsClub.attach(gameAddress);
+      const gameAsClub = rpsClub.attach(gameAddress) as RPSClub;
 
       // We can't directly call the callback from the game contract without playing a full game.
       // However, even if we could, it would fail.
@@ -151,8 +120,8 @@ describe("RPSClub.sol", function () {
         // 2. Impersonate the game contract to make the callback
         await ethers.provider.send("hardhat_impersonateAccount", [gameAddress]);
         const gameSigner = await ethers.getSigner(gameAddress);
-        const { networkHelpers } = await hre.network.connect();
-        await networkHelpers.setBalance(gameAddress, 1000000000000000000n); // Sets 1 ETH
+
+        await setBalance(gameAddress, 1000000000000000000n); // Sets 1 ETH
 
         // 3. As the game contract, call the callback to report Alice as the winner
         await rpsClub.connect(gameSigner).RPSContractCallback(aliceAddr, 1); // endState 1 = P1_WINS
@@ -168,7 +137,7 @@ describe("RPSClub.sol", function () {
         await expect(rpsClub.connect(signers.alice).exit()).to.be.revertedWith("you have nothing");
 
         // Stop impersonating the game contract account
-        await ethers.provider.send("hardhat_stopImpersonatingAccount", [gameAddress]);
+        await stopImpersonatingAccount(gameAddress);
       });
     });
   });
