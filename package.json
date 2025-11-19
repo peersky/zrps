@@ -4,7 +4,7 @@
   "version": "0.3.0-1",
   "engines": {
     "node": ">=20",
-    "npm": ">=7.0.0"
+    "pnpm": ">=7.0.0"
   },
   "license": "BSD-3-Clause-Clear",
   "homepage": "https://github.com/zama-ai/fhevm-hardhat-template/README.md",
@@ -24,14 +24,15 @@
     "hardhat"
   ],
   "dependencies": {
-    "encrypted-types": "^0.0.4",
-    "@fhevm/solidity": "^0.9.1"
+    "@fhevm/solidity": "^0.9.1",
+    "@openzeppelin/contracts": "^5.4.0",
+    "encrypted-types": "^0.0.4"
   },
   "devDependencies": {
     "@fhevm/hardhat-plugin": "^0.3.0-1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@nomicfoundation/hardhat-ethers": "^3.1.0",
-    "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
     "@nomicfoundation/hardhat-verify": "^2.1.0",
     "@typechain/ethers-v6": "^0.5.1",
     "@typechain/hardhat": "^9.1.0",
@@ -65,13 +66,13 @@
     "contracts"
   ],
   "scripts": {
-    "clean": "rimraf ./fhevmTemp ./artifacts ./cache ./coverage ./types ./coverage.json ./dist && npm run typechain",
+    "clean": "rimraf ./fhevmTemp ./artifacts ./cache ./coverage ./types ./coverage.json ./dist && pnpm run typechain",
     "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat compile",
-    "coverage": "cross-env SOLIDITY_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"test/**/*.ts\" && npm run typechain",
-    "lint": "npm run lint:sol && npm run lint:ts && npm run prettier:check",
+    "coverage": "cross-env SOLIDITY_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"test/**/*.ts\" && pnpm run typechain",
+    "lint": "pnpm run lint:sol && pnpm run lint:ts && pnpm run prettier:check",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:ts": "eslint --ignore-path ./.eslintignore --ext .js,.ts .",
-    "postcompile": "npm run typechain",
+    "postcompile": "pnpm run typechain",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yml}\"",
     "prettier:write": "prettier --write \"**/*.{js,json,md,sol,ts,yml}\"",
     "test": "hardhat test",
