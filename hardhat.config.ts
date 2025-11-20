@@ -9,18 +9,19 @@ import type { HardhatUserConfig } from "hardhat/config";
 import { vars } from "hardhat/config";
 import "solidity-coverage";
 
-import "./tasks/accounts";
-import "./tasks/FHECounter";
-
+import "./tasks/rps";
 // Run 'npx hardhat vars setup' to see the list of variables that need to be set
 
 const MNEMONIC: string = vars.get("MNEMONIC", "test test test test test test test test test test test junk");
 const INFURA_API_KEY: string = vars.get("INFURA_API_KEY", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+const ETHERSCAN_API_KEY: string = vars.get("ETHERSCAN_API_KEY", "");
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   namedAccounts: {
     deployer: 0,
+    alice: 1,
+    bob: 2,
   },
   etherscan: {
     apiKey: {
@@ -80,6 +81,9 @@ const config: HardhatUserConfig = {
       },
       evmVersion: "cancun",
     },
+  },
+  sourcify: {
+    enabled: true,
   },
   typechain: {
     outDir: "types",

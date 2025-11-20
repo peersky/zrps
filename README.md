@@ -1,103 +1,159 @@
-# FHEVM Hardhat Template
+Here is the extended `README.md`. I have kept the structure of the original Zama template but injected the specific instructions for the **Encrypted Rock-Paper-Scissors** project, highlighting the custom tasks and architectural decisions we made.
 
-A Hardhat-based template for developing Fully Homomorphic Encryption (FHE) enabled Solidity smart contracts using the
-FHEVM protocol by Zama.
+-----
+
+# Encrypted Rock-Paper-Scissors (FHEVM)
+
+A confidential, verifiable Rock-Paper-Scissors game built on the [Zama fhEVM](https://docs.zama.ai/fhevm). This project demonstrates how to build privacy-preserving dApps where game logic executes over encrypted data, revealing only the final outcome.
+
+It serves as a reference implementation for **FHEVM v0.9 Self-Relayed Decryption** and **EIP-1167 Proxy Patterns** with encrypted state.
+
+## Features
+
+  * **Confidentiality:** Players' moves are encrypted using Fully Homomorphic Encryption (FHE). The contract never sees the raw inputs.
+  * **Fairness:** Game logic executes blindly on-chain.
+  * **Gas Efficiency:** Uses a `uint8` bitmask architecture to pack game state into a single encrypted storage slot.
+  * **Proxy Pattern:** Implements EIP-1167 Clones via a Factory (`RPSClub`) for cheap game instantiation.
+  * **Self-Relayed Decryption:** Implements the v0.9 FHEVM architecture where the client handles the decryption workflow via the Zama SDK.
+  * **PvC Mode:** Supports single-player mode driven by encrypted on-chain randomness.
 
 ## Quick Start
 
-For detailed instructions see:
-[FHEVM Hardhat Quick Start Tutorial](https://docs.zama.ai/protocol/solidity-guides/getting-started/quick-start-tutorial)
-
 ### Prerequisites
 
-- **Node.js**: Version 20 or higher
-- **npm or yarn/pnpm**: Package manager
+  - **Node.js**: Version 20 or higher
+  - **pnpm** (recommended) or npm
+  - **Sepolia ETH:** For deployment.
 
 ### Installation
 
-1. **Install dependencies**
+1.  **Install dependencies**
 
-   ```bash
-   npm install
-   ```
+    ```bash
+    pnpm install
+    ```
 
-2. **Set up environment variables**
+2.  **Set up environment variables**
+  ```bash
+    npx hardhat vars set ETHERSCAN_API_KEY
+    npx hardhat vars set MNEMONIC
+    npx hardhat vars set INFURA_API_KEY
+  ```
 
-   ```bash
-   npx hardhat vars set MNEMONIC
 
-   # Set your Infura API key for network access
-   npx hardhat vars set INFURA_API_KEY
+3.  **Compile**
 
-   # Optional: Set Etherscan API key for contract verification
-   npx hardhat vars set ETHERSCAN_API_KEY
-   ```
+    ```bash
+    npx hardhat compile
+    ```
 
-3. **Compile and test**
+## 🕹️ How to Play (CLI)
 
-   ```bash
-   npm run compile
-   npm run test
-   ```
+This project includes custom Hardhat Tasks to simulate a full game loop from the CLI. These tasks handle the encryption, move submission, and the v0.9 self-relay decryption flow.
 
-4. **Deploy to local network**
+### 1. Deploy the Game Factory
 
-   ```bash
-   # Start a local FHEVM-ready node
-   npx hardhat node
-   # Deploy to local network
-   npx hardhat deploy --network localhost
-   ```
+First, deploy the logic contract and the factory to Sepolia.
 
-5. **Deploy to Sepolia Testnet**
+```bash
+npx hardhat deploy --network sepolia
+```
 
-   ```bash
-   # Deploy to Sepolia
-   npx hardhat deploy --network sepolia
-   # Verify contract on Etherscan
-   npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
-   ```
+### 2. Create a Game
 
-6. **Test on Sepolia Testnet**
+To play against the AI (PvC mode), use the zero address (`0x00...00`) as the opponent.
 
-   ```bash
-   # Once deployed, you can run a simple test on Sepolia.
-   npx hardhat test --network sepolia
-   ```
+```bash
+npx hardhat rps:create --network sepolia --opponent 0x0000000000000000000000000000000000000000
+```
+
+*Copy the `Game Address` returned by this command.*
+
+### 3. Submit Move (Player 1)
+
+Encrypts and submits your move. Valid moves are `ROCK`, `PAPER`, or `SCISSORS`.
+
+```bash
+# Replace with your Game Address
+npx hardhat rps:play --network sepolia --game 0xYourGameAddress --move ROCK
+```
+
+*Note: Since you are playing against the AI, the contract will automatically generate the opponent's move in the same transaction.*
+
+### 4. Resolve Game (The Reveal)
+
+This task fetches the encrypted state, requests decryption from the Zama KMS via the Relayer SDK, and submits the proof on-chain to finalize the winner.
+
+```bash
+npx hardhat rps:resolve --network sepolia --game 0xYourGameAddress
+```
+
+## 🧪 Testing
+
+We use the `fhevm` mock environment for unit testing to ensure logic correctness without waiting for block confirmations.
+
+```bash
+npx hardhat test
+```
 
 ## 📁 Project Structure
 
 ```
-fhevm-hardhat-template/
-├── contracts/           # Smart contract source files
-│   └── FHECounter.sol   # Example FHE counter contract
-├── deploy/              # Deployment scripts
-├── tasks/               # Hardhat custom tasks
-├── test/                # Test files
-├── hardhat.config.ts    # Hardhat configuration
-└── package.json         # Dependencies and scripts
+encrypted-rps/
+├── contracts/
+│   ├── RPS.sol                          # Game Logic (FHE enabled)
+│   ├── RPSClub.sol                      # Factory Contract (ERC1155 + Clones)
+│   ├── LibRPS.sol                       # Structs and Storage Layout
+│   └── ZamaEthereumConfigInitializable.sol # Proxy-compatible Config
+├── deploy/                              # Deployment scripts
+├── tasks/
+│   └── rps.ts                           # CLI Game Tasks (Create, Play, Resolve)
+├── test/                                # Unit tests (Mock Mode)
+└── hardhat.config.ts                    # Configuration
 ```
 
-## 📜 Available Scripts
+## 🏗️ Architecture Highlights
 
-| Script             | Description              |
-| ------------------ | ------------------------ |
-| `npm run compile`  | Compile all contracts    |
-| `npm run test`     | Run all tests            |
-| `npm run coverage` | Generate coverage report |
-| `npm run lint`     | Run linting checks       |
-| `npm run clean`    | Clean build artifacts    |
+### Bitmask State
 
-## 📚 Documentation
+Instead of storing Player 1 and Player 2 moves in separate `euint8` variables, the game packs the state into a single `euint8` bitmask. This reduces FHE storage operations by 50%.
 
-- [FHEVM Documentation](https://docs.zama.ai/fhevm)
-- [FHEVM Hardhat Setup Guide](https://docs.zama.ai/protocol/solidity-guides/getting-started/setup)
-- [FHEVM Testing Guide](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat/write_test)
-- [FHEVM Hardhat Plugin](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
+### Factory & Proxy Pattern
 
-## 📄 License
+To allow cheap game instantiation, we use **EIP-1167 Minimal Proxies**.
 
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
+  * **Challenge:** Constructors do not execute for clones, breaking standard Zama configuration.
+  * **Solution:** We implemented `ZamaEthereumConfigInitializable`, a custom abstract contract that initializes the FHE configuration via an `initialize()` function.
+
+### Self-Relayed Decryption (v0.9)
+
+This project implements the new FHEVM v0.9 architecture where the Zama Oracle is deprecated.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Contract
+    participant Relayer as Zama Relayer
+    participant KMS as Zama KMS
+
+    User->>Contract: 1. play(EncryptedMove)
+    Note right of Contract: Stores move<br/>Flags state as Decryptable
+    Contract-->>User: Transaction Confirmed
+
+    User->>Relayer: 2. publicDecrypt(Handle)
+    Relayer->>KMS: Request Decryption
+    KMS-->>Relayer: Result + Signature
+    Relayer-->>User: Result + Signature
+
+    User->>Contract: 3. resolveGame(Result, Signature)
+    Note right of Contract: Verify Signature<br/>Determine Winner
+    Contract-->>User: GameResolved Event
+```
+
+1.  **Contract:** Flags state as `makePubliclyDecryptable`.
+2.  **Client:** Fetches handle, calls `instance.publicDecrypt()` via SDK.
+3.  **Client:** Calls `contract.resolveGame()` with the result and KMS signature.
+4.  **Contract:** Verifies signature via `FHE.verifySignatures()` and finalizes the game.
 
 ## 🆘 Support
 
@@ -106,5 +162,6 @@ This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE]
 - **Community**: [Zama Discord](https://discord.gg/zama)
 
 ---
+## 📄 License
 
-**Built with ❤️ by the Zama team**
+This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.

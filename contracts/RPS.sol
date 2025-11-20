@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {FHE, euint32, euint8, externalEuint8, ebool} from "@fhevm/solidity/lib/FHE.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {ZamaEthereumConfigInitializable} from "./ZamaConfigInitializable.sol";
 import {LibRPS, RPSStruct} from "./LibRPS.sol";
 
 interface IResultCallback {
@@ -15,7 +15,7 @@ interface IResultCallback {
  * @dev Logic contract meant to be cloned.
  * State Layout: [unused:2] [P2_Move:3] [P1_Move:3]
  */
-contract RPS is ZamaEthereumConfig, Initializable {
+contract RPS is ZamaEthereumConfigInitializable {
     event ResultsPublished(address winner, uint8 state);
     event AllPlayersMadeMove();
     using LibRPS for RPSStruct;
@@ -31,6 +31,7 @@ contract RPS is ZamaEthereumConfig, Initializable {
      * @dev Replaces constructor for clones.
      */
     function initialize(address _p1, address _p2, address resultCallback) public initializer {
+        __ZamaEthereumConfig_init();
         RPSStruct storage s = LibRPS.getStorage();
         require(_p1 != _p2, "Same players");
         s.player1 = _p1;
