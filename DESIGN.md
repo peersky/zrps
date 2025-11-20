@@ -65,7 +65,7 @@ During development on the Sepolia testnet, the `rps:resolve` task failed with `H
 ## 4. Reflection
 
 ### If I had more time
-1.  **Private Result Reveal (EIP-712):** Currently, `resolveGame` makes the result public. Instead the deployer contract could specify a callback hook that executes on encrypted logic. That could be implemented as encrypted callback, leaving it for downstream to decide upon the whether to make the results globally accessable or use it e.g. for confidential token minting instead. 
+1.  **Private Result Reveal:** Currently, `resolveGame` makes the result public. Instead the deployer contract could specify a callback hook that executes on encrypted logic. That could be implemented as encrypted callback, leaving it for downstream to decide upon the whether to make the results globally accessable or use it e.g. for confidential token minting instead. 
 2.  **Strict ZK Range Proofs:** The bitmask logic allows invalid inputs (e.g., 3 or 7). While the contract defaults these to a loss, enforcing `input \in {1, 2, 4}` at the ZK proof generation level would improve DX.
 3.  **Frontend UI:** A React interface using the `fhevm-react-template` would demonstrate the user flow (signing the re-encryption request) better than the CLI.
 
