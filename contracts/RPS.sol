@@ -16,19 +16,34 @@ interface IResultCallback {
  * State Layout: [unused:2] [P2_Move:3] [P1_Move:3]
  */
 contract RPS is ZamaEthereumConfigInitializable {
+    /// @notice Emitted when the game result is computed and the winner is determined.
+    /// @param winner The address of the winning player, or address(0) for a draw.
+    /// @param state The decrypted public state of the game board.
     event ResultsPublished(address winner, uint8 state);
+
+    /// @notice Emitted when both players have submitted their moves.
     event AllPlayersMadeMove();
+
     using LibRPS for RPSStruct;
     using FHE for euint8;
 
     // --- Events ---
+    /// @notice Emitted when a player successfully submits their move.
+    /// @param player The address of the player who submitted the move.
     event MoveSubmitted(address indexed player);
+
+    /// @notice A legacy event, kept for potential future use.
     event GameResolved(string result, uint8 winnerCode);
 
     // --- Initialization (For Clones) ---
 
     /**
-     * @dev Replaces constructor for clones.
+     * @notice Initializes the game state for a new clone.
+     * @dev Replaces the constructor for EIP-1167 proxies. It sets the players and the optional result callback contract.
+     * A zero address for `_p2` indicates a single-player game against on-chain randomness.
+     * @param _p1 The address of player 1.
+     * @param _p2 The address of player 2. Can be address(0) for single-player mode.
+     * @param resultCallback The address of a contract to notify with the game result. Can be address(0).
      */
     function initialize(address _p1, address _p2, address resultCallback) public initializer {
         __ZamaEthereumConfig_init();
@@ -110,6 +125,15 @@ contract RPS is ZamaEthereumConfigInitializable {
     }
 
     // --- Resolution Logic ---
+
+    /**
+     * @notice Computes the game result using a decrypted state and a KMS signature.
+     * @dev This function is called by a client after they have fetched the encrypted state,
+     * requested decryption from the Zama KMS via the Relayer SDK, and received the result.
+     * The contract verifies the KMS signature to ensure the integrity of the decrypted state.
+     * @param abiEncodedState The ABI-encoded decrypted game state (`uint8`).
+     * @param decryptionProof The KMS signature proving the validity of the decryption.
+     */
     function computeResult(bytes memory abiEncodedState, bytes memory decryptionProof) public {
         RPSStruct storage s = LibRPS.getStorage();
         require(s.player1Moved && s.player2Moved, "Not all players made a move yet");
@@ -156,10 +180,21 @@ contract RPS is ZamaEthereumConfigInitializable {
         }
     }
 
+    /**
+     * @notice A view function to get the winner of the game.
+     * @dev Returns address(0) if the game is a draw or has not yet been resolved.
+     * @return The address of the winning player.
+     */
     function result() public view returns (address) {
         return LibRPS.getStorage().winner;
     }
 
+    /**
+     * @notice A view function to read the raw game state struct.
+     * @dev The `gameState` field will be encrypted. To get the cleartext winner, use the `result()` function.
+     * This function is primarily used by clients to fetch the encrypted handle for decryption.
+     * @return The current `RPSStruct` state from storage.
+     */
     function readState() public pure returns (RPSStruct memory) {
         return LibRPS.getStorage();
     }
