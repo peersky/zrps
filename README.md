@@ -1,7 +1,3 @@
-Here is the extended `README.md`. I have kept the structure of the original Zama template but injected the specific instructions for the **Encrypted Rock-Paper-Scissors** project, highlighting the custom tasks and architectural decisions we made.
-
------
-
 # Encrypted Rock-Paper-Scissors (FHEVM)
 
 A confidential, verifiable Rock-Paper-Scissors game built on the [Zama fhEVM](https://docs.zama.ai/fhevm). This project demonstrates how to build privacy-preserving dApps where game logic executes over encrypted data, revealing only the final outcome.
@@ -95,6 +91,42 @@ We use the `fhevm` mock environment for unit testing to ensure logic correctness
 ```bash
 npx hardhat test
 ```
+
+## 🛠️ Developer Integration Guide
+
+To integrate the Rock-Paper-Scissors game into your own project, interact with the `RPSClub` factory contract.
+
+### On-Chain Integration (Solidity)
+
+Here is how another smart contract can create a new game instance for two of its users.
+
+```solidity
+import { RPSClub } from "./RPSClub.sol";
+
+contract MyGameHub {
+    RPSClub rpsClub;
+
+    constructor(address _rpsClubAddress) {
+        rpsClub = RPSClub(_rpsClubAddress);
+    }
+
+    function startRpsMatch(address player1, address player2) external {
+        // The RPSClub contract creates a new game clone
+        // and emits a `GameCreated(address instance, ...)` event.
+        // Your application can listen for this event to get the new game's address.
+        rpsClub.createGame(player1, player2);
+    }
+}
+```
+
+You can also use callback from `RPS.sol` to handle the game outcomes: 
+```solidity
+interface IResultCallback {
+    function RPSContractCallback(address winner, uint8 endState) external;
+
+```
+Implementation for this is shown at `RPSClub.sol`
+
 
 ## 📁 Project Structure
 

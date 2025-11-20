@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { Signer } from "ethers";
 import { expect } from "chai";
 import { RPSClub } from "../types";
-import { impersonateAccount, setBalance, stopImpersonatingAccount } from "@nomicfoundation/hardhat-network-helpers";
+import { setBalance, stopImpersonatingAccount } from "@nomicfoundation/hardhat-network-helpers";
 
 type Signers = {
   deployer: Signer;
